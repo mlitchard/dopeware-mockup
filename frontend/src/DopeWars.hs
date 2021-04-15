@@ -1,28 +1,39 @@
-{-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE DeriveGeneric       #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE JavaScriptFFI       #-}
+{-# LANGUAGE MonoLocalBinds      #-}
 {-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DeriveAnyClass      #-}
 {-# LANGUAGE TypeFamilies        #-}
 
 module DopeWars where
 
+import Prelude hiding (lookup)
+
 import Control.Monad.Fix
-import Data.Text hiding (map)
+import Control.Monad.IO.Class
+-- import Data.Map.Strict
+-- import qualified Data.Text as T
+import Data.Text hiding (map,empty)
+
 import Reflex.Dom
 
 import Schema
-
+rowOne, rowTwo, rowThree :: [PlanetName]
 rowOne   = [Arrakis, Minbar, Tatooine]
 rowTwo   = [CentauriPrime, Vulcan, Dantooine]
 rowThree = [Mongo, Terra, Pluto]
+
 
 dopeWars :: forall m t .
                 ( DomBuilder t m
                 , PostBuild t m
                 , MonadFix m
-                , MonadHold t m)
+                , MonadHold t m
+                , MonadIO m)
                 => Event t (GameState) -> m ()
 dopeWars initE = do
     _ <- mfix go
@@ -30,76 +41,77 @@ dopeWars initE = do
     where
         go :: Event t GameState -> m (Event t GameState)
         go newStateE = do
-            let stateE = traceEvent "stateE" $ leftmost [newStateE, initE]
+            let stateE' = leftmost [newStateE, initE]
             divClass "section" $ do
-                displayBoard stateE
+                divClass "level" $ do
+                    switchScreenE :: (Event t GameState) <-
+                        screenSwitchingPanel stateE'
+                    let stateE = leftmost [switchScreenE]
+                -- divClass "level" $ do
+                    
+                    return stateE
 
-displayBoard :: forall m t .
-                    ( DomBuilder t m
-                    , PostBuild t m
-                    , MonadFix m
-                    , MonadHold t m)
-                    => Event t GameState
-                    -> m (Event t GameState)
-displayBoard displayE = do
-    let allDisplayE :: Event t (m (Event t GameState))
-        allDisplayE = displayAllPlanets <$> displayE
-    displayDyn :: Dynamic t (Event t (GameState)) <-
-        widgetHold (return never) allDisplayE
-    return $ switchPromptlyDyn displayDyn
+screenSwitchingPanel :: forall m t .
+                            ( DomBuilder t m
+                            , PostBuild t m
+                            , MonadFix m
+                            , MonadHold t m
+                            , MonadIO m) 
+                            => Event t GameState -> m (Event t GameState)
+screenSwitchingPanel gameStateE = do
+    let screenE :: Event t (m (Event t ScreenState))
+        screenE = ffor (_screenState <$> gameStateE) $ \case
+                      Travel -> travelTopPanel
+                      Market -> marketTopPanel
+    updatedScreenDyn :: Dynamic t (Event t ScreenState) <- 
+        widgetHold (return never) screenE
+    let updatedScreenE = traceEvent "switchPromptlyDyn" $ switchPromptlyDyn updatedScreenDyn
+    mGameStateDyn <- holdDyn Nothing $ Just <$> gameStateE
+    let mGameStateB = current mGameStateDyn
+        updatedGameStateE = attachWithMaybe 
+                                updateScreen 
+                                mGameStateB
+                                updatedScreenE        
+    return updatedGameStateE
 
-displayAllPlanets :: forall m t .
-                    ( DomBuilder t m
-                    , PostBuild t m
-                    , MonadFix m
-                    , MonadHold t m)
-                    => GameState
-                    -> m (Event t GameState)
-displayAllPlanets currentState = do
-    let (MapFormatting {..}) = formatMap currentState  
-    divClass "section" $ do
-        rowOneE :: Event t PlanetName <-
-            divClass "level" $ do
-                leftmost <$> mapM planetButton _rowOne
-        rowTwoE :: Event t PlanetName <-
-            divClass "level" $ do
-                leftmost <$> mapM planetButton _rowTwo
-        rowThreeE :: Event t PlanetName <-
-            divClass "level" $ do
-                leftmost <$> mapM planetButton _rowThree
-        let newPlanetE      = leftmost [rowOneE, rowTwoE, rowThreeE]
-            updateLocationE = (updateLocation currentState) <$> newPlanetE 
-        return updateLocationE
+updateScreen :: Maybe GameState -> ScreenState -> Maybe GameState
+updateScreen Nothing _                 = Nothing
+updateScreen (Just gState) screenState =
+    Just $ gState {_screenState = screenState}
 
-updateLocation :: GameState -> PlanetName -> GameState
-updateLocation gstate pname = gstate {_location = pname}
+travelTopPanel :: forall m t .
+                      ( DomBuilder t m
+                      , PostBuild t m
+                      , MonadFix m
+                      , MonadHold t m
+                      , MonadIO m)
+                      => m (Event t ScreenState)
+travelTopPanel = do
+    divClass "level-left" $ do
+        text "Click on a highlighted planet to travel there"
+    divClass "level-right" $ do
+        (elt,_) <- elClass' "button" panelButton $ do
+            text "go to market"
+        return $ traceEvent "MarketClick" $ Market <$ domEvent Click elt 
 
-planetButton :: forall m t .
-                ( DomBuilder t m
-                , PostBuild t m
-                , MonadFix m
-                , MonadHold t m)
-                => (PlanetName,Bool) -> m (Event t PlanetName)
-planetButton (planet,isCurrent) = do
-    let (iconClass,active) =
-            if isCurrent then (iClass, current) else ("d-none", empty)
-    (elt,_) <-
-        elClass' "button" (buttonClass <> active) $ do
-            elClass "div" "icon is-large" $ do
-                elClass "i" iconClass $ blank
-            el "span" $ do
-                text $ (pack . show) planet
-    return $ planet <$ domEvent Click elt
-        where
-            iClass = "fa fa-space-shuttle"
-            buttonClass = "button is-rounded is-link is-outlined"
-            current = "is-outlined"
+marketTopPanel :: forall m t .
+                      ( DomBuilder t m
+                      , PostBuild t m
+                      , MonadFix m
+                      , MonadHold t m
+                      , MonadIO m)
+                      => m (Event t ScreenState)
+marketTopPanel = do
+    boardChangeE <- divClass "level-left" $ do
+        (elt,_) <- elClass' "button" panelButton $ do
+            text "Planet Travel"
+        return $ Travel <$ domEvent Click elt
+    divClass "level-right" $ do
+        text "You can buy or sell these perfectly legal wares."
+    return boardChangeE
 
-formatMap :: GameState -> MapFormatting
-formatMap GameState{..} =
-    let r1 = fmap (\p -> (p, (_location == p))) rowOne
-        r2 = fmap (\p -> (p, (_location == p))) rowTwo
-        r3 = fmap (\p -> (p, (_location == p))) rowThree
-    in MapFormatting r1 r2 r3
+panelButton :: Text
+panelButton = "button is-rounded is-link is-outlined"
 
-     
+
+      

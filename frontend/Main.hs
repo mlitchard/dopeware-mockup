@@ -7,8 +7,6 @@
 
 module Main where
 
-import Control.Monad.Fix
-import Data.Text hiding (map)
 import Reflex.Dom
 
 import DopeWars
