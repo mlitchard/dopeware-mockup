@@ -16,7 +16,6 @@ import Prelude hiding (lookup)
 import Control.Monad.Fix
 import Control.Monad.IO.Class
 import Data.Map.Strict
-import qualified Data.Text as T
 import Data.Text hiding (map,empty)
 
 import Reflex.Dom
@@ -94,8 +93,12 @@ travelPanel :: forall m t .
                    , MonadIO m)
                    => Dynamic t GameState -> m (Event t GameState)
 travelPanel gameStateDyn = do
+    let (msgClassDyn,msgTextDyn) =  
+            splitDynPure $ ffor (_error <$> gameStateDyn) $ \case
+                  (Just (_,NotNeighbor)) -> (errClass',errMsg')
+                  _                      -> (promptClass',promptMsg')
     divClass "level-left" $ do
-        text "Click on a highlighted planet to travel there"
+        elDynClass "div" msgClassDyn $ dynText msgTextDyn
     updatedScreenE <- divClass "level-right" $ do
         (elt,_) <- elClass' "button" panelButton $ do
             text "go to market"
@@ -106,6 +109,12 @@ travelPanel gameStateDyn = do
                                 gameStateB
                                 updatedScreenE
     return updatedGameStateE
+    where  
+        (errClass',errMsg')
+            = ("has-text-danger", "You can't get there from here. Select a highlighted planet")
+        (promptClass',promptMsg') 
+            = ("has-text-bold"
+              , "Click on a highlighted planet to travel there")
 
 travelMap :: forall m t .
                  ( DomBuilder t m
@@ -140,7 +149,6 @@ planetButton :: forall m t .
 planetButton gameStateDyn planetName = do
     (elt,_) <-
         elClass "section" "section" $ do
-            errMsg planetName gameStateDyn
             elDynAttr' "button" buttonAttrDyn $ do
                 iconAttrDyn
                 el "span" $ do
@@ -168,23 +176,6 @@ planetButton gameStateDyn planetName = do
                            False -> "d-none"
         iconAttrDyn  = elClass "div" "icon is-large" $ do
                            elDynClass "i" iconClassDyn $ blank
-
-errMsg :: forall m t .
-              ( DomBuilder t m
-              , PostBuild t m
-              , MonadFix m
-              , MonadHold t m
-              , MonadIO m)
-              => PlanetName -> Dynamic t GameState -> m ()
-errMsg planetName gstateDyn = do
-    let (errMsgClassDyn,errMsgTextDyn) = 
-            splitDynPure $ ffor (isBadMove planetName <$> gstateDyn) $ \case
-                               True  -> ("has-text-danger"
-                                        , "Can't get there from here")
-                               False -> (T.empty, T.empty)
-    elDynClass "section" errMsgClassDyn $
-        dynText errMsgTextDyn 
- 
 
 isBadMove :: PlanetName -> GameState -> Bool
 isBadMove planetName (GameState {..}) = 
