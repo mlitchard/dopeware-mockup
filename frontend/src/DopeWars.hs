@@ -141,22 +141,27 @@ planetButton gameStateDyn planetName = do
     (elt,_) <-
         elClass "section" "section" $ do
             errMsg
-            elAttr' "button" buttonAttr $ do
+            elDynAttr' "button" buttonAttrDyn $ do
                 iconAttrDyn
                 el "span" $ do
                     text $ (pack . show) planetName
     let clickE = domEvent Click elt
+        cpPayloadDyn   = ffor2 gameStateDyn isNeighborDyn (,)
         currentPlanetE = currentPlanet planetName 
-                             <$> tag (current gameStateDyn) clickE
+                             <$> tag (current cpPayloadDyn) clickE
     return currentPlanetE    
 --        $ traceEvent "*** Click! *** " 
 --        $ (planet,currentPlanet) 
 --        <$ domEvent Click elt
     where
+        isNeighborDyn = isNeighbor planetName <$> gameStateDyn
         locationDyn = _location <$> gameStateDyn
         isCurrentDyn = (\loc -> loc == planetName) <$> locationDyn
+        neighborAttrDyn = neighborAttr <$> isNeighborDyn
         errMsg      = return ()
-        buttonAttr  = ("class" =: buttonClass)
+        buttonClassDyn  = constDyn ("class" =: buttonClass) -- <> neighborAttr
+        buttonAttrDyn = buttonClassDyn <> neighborAttrDyn
+        
         buttonClass = "button is-rounded is-link is-outlined"
         iconClassDyn = ffor isCurrentDyn $ \case
                            True -> "fa fa-space-shuttle" 
@@ -164,9 +169,21 @@ planetButton gameStateDyn planetName = do
         iconAttrDyn  = elClass "div" "icon is-large" $ do
                            elDynClass "i" iconClassDyn $ blank
 
-currentPlanet :: PlanetName -> GameState -> GameState
-currentPlanet planetName (GameState {..}) =
-    if isNeighbor then moveSucceeds else moveFails
+neighborAttr :: Bool -> Map Text Text
+neighborAttr isNeighbor' = if isNeighbor'
+                            then ("style" =: "border: 5px solid #0000ff;")
+                            else mempty
+isNeighbor :: PlanetName -> GameState -> Bool
+isNeighbor planetName (GameState {..}) = elem planetName neighbors
+    where
+        neighbors = 
+            case (lookup _location _planetMap) of
+                Nothing  -> mempty
+                (Just l) -> _neighbors l
+        
+currentPlanet :: PlanetName -> (GameState, Bool) -> GameState
+currentPlanet planetName ((GameState {..}), isNeighbor') =
+    if isNeighbor' then moveSucceeds else moveFails
     where
         moveSucceeds = GameState
                          _screenState
@@ -180,11 +197,12 @@ currentPlanet planetName (GameState {..}) =
                          (Just (planetName, NotNeighbor))
                          _planetMap
                          _credits
+{-
         isNeighbor = elem planetName neighbors
         neighbors = case (lookup _location _planetMap) of
                         Nothing -> mempty
                         (Just l) -> _neighbors l
-               
+-}               
                 
 {-
 displayAllPlanets :: forall m t .
