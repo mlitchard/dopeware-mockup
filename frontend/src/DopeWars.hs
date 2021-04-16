@@ -16,7 +16,7 @@ import Prelude hiding (lookup)
 import Control.Monad.Fix
 import Control.Monad.IO.Class
 import Data.Map.Strict
--- import qualified Data.Text as T
+import qualified Data.Text as T
 import Data.Text hiding (map,empty)
 
 import Reflex.Dom
@@ -140,7 +140,7 @@ planetButton :: forall m t .
 planetButton gameStateDyn planetName = do
     (elt,_) <-
         elClass "section" "section" $ do
-            errMsg
+            errMsg planetName gameStateDyn
             elDynAttr' "button" buttonAttrDyn $ do
                 iconAttrDyn
                 el "span" $ do
@@ -158,7 +158,7 @@ planetButton gameStateDyn planetName = do
         locationDyn = _location <$> gameStateDyn
         isCurrentDyn = (\loc -> loc == planetName) <$> locationDyn
         neighborAttrDyn = neighborAttr <$> isNeighborDyn
-        errMsg      = return ()
+--        errMsg      = return ()
         buttonClassDyn  = constDyn ("class" =: buttonClass) -- <> neighborAttr
         buttonAttrDyn = buttonClassDyn <> neighborAttrDyn
         
@@ -168,6 +168,29 @@ planetButton gameStateDyn planetName = do
                            False -> "d-none"
         iconAttrDyn  = elClass "div" "icon is-large" $ do
                            elDynClass "i" iconClassDyn $ blank
+
+errMsg :: forall m t .
+              ( DomBuilder t m
+              , PostBuild t m
+              , MonadFix m
+              , MonadHold t m
+              , MonadIO m)
+              => PlanetName -> Dynamic t GameState -> m ()
+errMsg planetName gstateDyn = do
+    let (errMsgClassDyn,errMsgTextDyn) = 
+            splitDynPure $ ffor (isBadMove planetName <$> gstateDyn) $ \case
+                               True  -> ("has-text-danger"
+                                        , "Can't get there from here")
+                               False -> (T.empty, T.empty)
+    elDynClass "section" errMsgClassDyn $
+        dynText errMsgTextDyn 
+ 
+
+isBadMove :: PlanetName -> GameState -> Bool
+isBadMove planetName (GameState {..}) = 
+    case _error of
+        (Just (p,e)) -> (e == NotNeighbor) && (p == planetName)
+        Nothing      -> False
 
 neighborAttr :: Bool -> Map Text Text
 neighborAttr isNeighbor' = if isNeighbor'
