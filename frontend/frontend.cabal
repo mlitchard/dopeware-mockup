@@ -26,4 +26,4 @@ executable frontend
  
   default-language:    Haskell2010
   hs-source-dirs:      ., src
-  other-modules:     DopeWars, Schema
+  other-modules:     DopeWars, Panels, PlanetBoard, Schema

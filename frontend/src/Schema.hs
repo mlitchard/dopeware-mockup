@@ -65,6 +65,11 @@ data Resource = Resource {
     , _priceStability :: PriceStability   
   } deriving (Show)
 
+rowOne, rowTwo, rowThree :: [PlanetName]
+rowOne   = [Arrakis, Minbar, Tatooine]
+rowTwo   = [CentauriPrime, Vulcan, Dantooine]
+rowThree = [Mongo, Terra, Pluto]
+
 initResourceMap :: Map ResourceName Resource
 initResourceMap = fromList $ (\rn -> (rn,r)) <$> [FinestGreen .. InterzoneSpecial]
     where
@@ -91,16 +96,18 @@ data GameState = GameState {
     , _planetMap   :: Map PlanetName Planet
     , _credits     :: Int
   } deriving (Show)
-
+{-
 data MapFormatting = MapFormatting {
       _rowOne   :: [PlanetName]
     , _rowTwo   :: [PlanetName]
     , _rowThree :: [PlanetName]
   } deriving (Show)
-    
+-}    
 initGameState :: GameState
 initGameState = GameState Travel Vulcan Nothing initPlanetMap 100 
 
+updateScreen :: GameState -> ScreenState -> GameState
+updateScreen gState screenState = gState {_screenState = screenState}
 newtype PInt = PInt Int
 
 instance Num PInt where
