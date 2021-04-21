@@ -24,11 +24,18 @@ import Panels
 import Schema
 
 travelBoard :: forall m t .
-                   ( DomBuilder t m
-                   , PostBuild t m
+                   ( Reflex t
+                   , Monad m
                    , MonadFix m
                    , MonadHold t m
-                   , MonadIO m)
+                   , MonadIO m
+                   , MonadIO (Performable m)
+                   , HasJSContext (Performable m)
+                   , DomBuilder t m
+                   , DomBuilderSpace m ~ GhcjsDomSpace
+                   , PerformEvent t m
+                   , TriggerEvent t m
+                   , PostBuild t m)
                    => Dynamic t GameState -> m (Event t GameState)
 travelBoard gameStateDyn = do
     boardSwitchE <- divClass "level" $ do
@@ -38,11 +45,18 @@ travelBoard gameStateDyn = do
     return $ leftmost [boardSwitchE, planetSwitchE]
 
 travelMap :: forall m t .
-                 ( DomBuilder t m
-                 , PostBuild t m
+                 ( Reflex t
+                 , Monad m
                  , MonadFix m
                  , MonadHold t m
-                 , MonadIO m)
+                 , MonadIO m
+                 , MonadIO (Performable m)
+                 , HasJSContext (Performable m)
+                 , DomBuilder t m
+                 , DomBuilderSpace m ~ GhcjsDomSpace
+                 , PerformEvent t m
+                 , TriggerEvent t m
+                 , PostBuild t m)
                  => Dynamic t GameState -> m (Event t GameState)
 travelMap gameStateDyn = do
     divClass "section" $ do
@@ -61,12 +75,21 @@ travelMap gameStateDyn = do
         return $ leftmost [rowOneE, rowTwoE, rowThreeE]
 
 planetButton :: forall m t .
-                ( DomBuilder t m
-                , PostBuild t m
-                , MonadFix m
-                , MonadHold t m
-                , MonadIO m)
-                => Dynamic t GameState -> PlanetName -> m (Event t GameState)
+                    ( Reflex t
+                    , Monad m
+                    , MonadFix m
+                    , MonadHold t m
+                    , MonadIO m
+                    , MonadIO (Performable m)
+                    , HasJSContext (Performable m)
+                    , DomBuilder t m
+                    , DomBuilderSpace m ~ GhcjsDomSpace
+                    , PerformEvent t m
+                    , TriggerEvent t m
+                    , PostBuild t m)
+                    => Dynamic t GameState 
+                    -> PlanetName 
+                    -> m (Event t GameState)
 planetButton gameStateDyn planetName = do
     (elt,_) <-
         elClass "section" "section" $ do
@@ -79,15 +102,11 @@ planetButton gameStateDyn planetName = do
         currentPlanetE = currentPlanet planetName 
                              <$> tag (current cpPayloadDyn) clickE
     return currentPlanetE    
---        $ traceEvent "*** Click! *** " 
---        $ (planet,currentPlanet) 
---        <$ domEvent Click elt
     where
         isNeighborDyn = isNeighbor planetName <$> gameStateDyn
         locationDyn = _location <$> gameStateDyn
         isCurrentDyn = (\loc -> loc == planetName) <$> locationDyn
         neighborAttrDyn = neighborAttr <$> isNeighborDyn
---        errMsg      = return ()
         buttonClassDyn  = constDyn ("class" =: buttonClass) -- <> neighborAttr
         buttonAttrDyn = buttonClassDyn <> neighborAttrDyn
         
@@ -124,11 +143,13 @@ currentPlanet planetName ((GameState {..}), isNeighbor') =
                          _screenState
                          planetName
                          Nothing
+                         Nothing
                          _planetMap
                          _credits
         moveFails    = GameState
                          _screenState
                          _location
+                         Nothing
                          (Just (planetName, NotNeighbor))
                          _planetMap
                          _credits

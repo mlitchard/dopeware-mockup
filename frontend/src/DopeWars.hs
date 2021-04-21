@@ -18,7 +18,7 @@ import Control.Monad.IO.Class
 
 import Reflex.Dom
 
-import Panels
+import MarketBoard
 import PlanetBoard
 import Schema
 
@@ -29,12 +29,19 @@ rowThree = [Mongo, Terra, Pluto]
 
 
 dopeWars :: forall m t .
-                ( DomBuilder t m
-                , PostBuild t m
-                , MonadFix m
-                , MonadHold t m
-                , MonadIO m)
-                => Event t (GameState) -> m ()
+                 ( Reflex t
+                 , Monad m
+                 , MonadFix m
+                 , MonadHold t m
+                 , MonadIO m
+                 , MonadIO (Performable m)
+                 , HasJSContext (Performable m)
+                 , DomBuilder t m
+                 , DomBuilderSpace m ~ GhcjsDomSpace
+                 , PerformEvent t m
+                 , TriggerEvent t m
+                 , PostBuild t m)
+                 => Event t (GameState) -> m ()
 dopeWars initE = do
     _ <- mfix go
     return ()
@@ -51,18 +58,25 @@ dopeWars initE = do
                 return stateE
 
 screenSwitchingPanel :: forall m t .
-                            ( DomBuilder t m
-                            , PostBuild t m
+                            ( Reflex t
+                            , Monad m
                             , MonadFix m
                             , MonadHold t m
-                            , MonadIO m) 
+                            , MonadIO m
+                            , MonadIO (Performable m)
+                            , HasJSContext (Performable m)
+                            , DomBuilder t m
+                            , DomBuilderSpace m ~ GhcjsDomSpace
+                            , PerformEvent t m
+                            , TriggerEvent t m
+                            , PostBuild t m)
                             => Event t GameState -> m (Event t GameState)
 screenSwitchingPanel gameStateE = do
     gameStateDyn <- holdDyn initGameState gameStateE
     let gsE :: Event t (m (Event t GameState))
         gsE = ffor (_screenState <$> gameStateE) $ \case
                       Travel -> travelBoard gameStateDyn
-                      Market -> marketPanel gameStateDyn
+                      Market -> marketBoard gameStateDyn
     updatedGameStateDyn :: Dynamic t (Event t GameState) <- 
         widgetHold (return never) gsE
     let updatedGameStateE = traceEvent "switchPromptlyDyn" 

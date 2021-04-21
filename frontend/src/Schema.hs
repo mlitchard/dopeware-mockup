@@ -21,10 +21,12 @@ data PlanetName
   | Pluto -- Indulge my trolling please.
   deriving (Show, Enum, Eq, Ord)
 
-data Planet = Planet {
-      _resources :: Map ResourceName Resource
-    , _neighbors :: [PlanetName]   
-  } deriving (Show)
+data Planet 
+    = Planet {
+          _resources :: Map ResourceName (Maybe Resource)
+        , _neighbors :: [PlanetName]   
+      } 
+    deriving (Show)
 
 initPlanetMap :: Map PlanetName Planet
 initPlanetMap = 
@@ -55,25 +57,43 @@ data ResourceName
   | PanGalacticGargleBlaster
   | BabyBlue
   | InterzoneSpecial
+  | WavyDavy
+  | BlindSquid
+  | VoidlessVoid
   deriving (Show, Enum, Eq, Ord)
 
-data Resource = Resource {
-      _highestPrice   :: PInt
-    , _lowestPrice    :: PInt
-    , _currentPrice   :: PInt
-    , _count          :: PInt
-    , _priceStability :: PriceStability   
-  } deriving (Show)
+marketRowOne, marketRowTwo, marketRowThree :: [ResourceName]
+
+marketRowOne = [FinestGreen, SubstanceD, Melange]
+marketRowTwo = [PanGalacticGargleBlaster, BabyBlue, InterzoneSpecial]
+marketRowThree = [WavyDavy, BlindSquid, VoidlessVoid]
+
+data Resource 
+  = Resource {
+        _highestPrice   :: PInt
+      , _lowestPrice    :: PInt
+      , _currentPrice   :: PInt
+      , _count          :: PInt
+      , _priceStability :: PriceStability   
+    } 
+  deriving (Show)
 
 rowOne, rowTwo, rowThree :: [PlanetName]
 rowOne   = [Arrakis, Minbar, Tatooine]
 rowTwo   = [CentauriPrime, Vulcan, Dantooine]
 rowThree = [Mongo, Terra, Pluto]
 
-initResourceMap :: Map ResourceName Resource
-initResourceMap = fromList $ (\rn -> (rn,r)) <$> [FinestGreen .. InterzoneSpecial]
+initResourceMap :: Map ResourceName (Maybe Resource)
+initResourceMap = fromList $ rowOnePairs <> rowTwoPairs <> rowThreePairs
     where
-        r = Resource 1000 10 500 10000 (Stable (PInt 50)) 
+        rowOnePairs   = (\rn -> (rn,rowOneRes)) <$> [FinestGreen .. Melange]
+        rowTwoPairs   = (\rn -> (rn,rowTwoRes)) 
+                            <$> [PanGalacticGargleBlaster .. InterzoneSpecial]
+        rowThreePairs = (\rn -> (rn, rowThreeRes))
+                            <$> [WavyDavy .. VoidlessVoid] 
+        rowOneRes = Nothing
+        rowTwoRes = Just $ Resource 1000 10 500 10000 (Stable (PInt 50))
+        rowThreeRes = Just $ Resource 10000 1000 5000 50 (Stable (PInt 100))
 data PriceStability 
   = Volatile -- Time for a price change
   | Stable PInt -- Price change weight
@@ -92,6 +112,7 @@ data PromptData = PromptData
 data GameState = GameState {
       _screenState :: ScreenState
     , _location    :: PlanetName
+    , _buyResource :: Maybe ResourceName
     , _error       :: Maybe (PlanetName, Error)
     , _planetMap   :: Map PlanetName Planet
     , _credits     :: Int
@@ -104,7 +125,7 @@ data MapFormatting = MapFormatting {
   } deriving (Show)
 -}    
 initGameState :: GameState
-initGameState = GameState Travel Vulcan Nothing initPlanetMap 100 
+initGameState = GameState Travel Vulcan Nothing Nothing initPlanetMap 100 
 
 updateScreen :: GameState -> ScreenState -> GameState
 updateScreen gState screenState = gState {_screenState = screenState}
