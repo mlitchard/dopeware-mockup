@@ -7,8 +7,12 @@
 
 module Modals.BuyModal where
 
-import Control.Monad.Fix               (MonadFix)
-import Control.Monad.IO.Class          (MonadIO)
+import Prelude                hiding (lookup)
+import Control.Monad                 (join)
+import Control.Monad.Fix             (MonadFix)
+import Control.Monad.IO.Class        (MonadIO)
+import Data.Map.Strict
+import Data.Maybe                    (fromMaybe)
 import Data.Text
 import Reflex
 import Reflex.Dom
@@ -62,10 +66,9 @@ buyModal :: forall m t .
                 , PostBuild t m)
                 => Maybe GameState -> m (Event t (Maybe GameState))
 buyModal Nothing = return never
-buyModal (Just (GameState {..})) = do
-    let title = case _buyResource of
-                   Just res -> ("Buying " <> (pack . show $ res))
-                   Nothing  -> empty
+buyModal (Just (GameState _ _ Nothing _ _ _)) = return never 
+buyModal (Just (GameState _ loc (Just resourceName) _ pmap credits)) = do
+    let title = ("Buying " <> (pack . show $ resourceName))
     divClass "modal is-active" $ do
         divClass "modal-background" $ blank
         divClass "modal-card" $ do
@@ -73,14 +76,24 @@ buyModal (Just (GameState {..})) = do
                 elClass "p" "modal-card-title" $
                     text title
                 elClass "button" "delete" $ blank    
-            elClass "section" "modal-card-body" $
-                text "modal"
-    return never
-            
-      
-            
-                 
-    
-   
-
-
+            elClass "section" "modal-card-body" $ do
+                divClass "level" $ do
+                    divClass "level-left" $ 
+                        text "Amount Available:"
+                    divClass "level-right" $ 
+                        text $ (pack . show) resourceAmount
+                divClass "level" $ do
+                    divClass "level-left" $ 
+                        text "Credits:"
+                    divClass "level-right" $ 
+                        text $ (pack . show) credits
+    return never 
+    where
+        resourceAmount :: PInt
+        resourceAmount = fromMaybe zero $ _count <$> mResource
+        mResource :: Maybe Resource 
+        mResource = (join . join) $ lookup resourceName <$> mResourceMap
+        mResourceMap :: Maybe (Map ResourceName (Maybe Resource))
+        mResourceMap = _resourceMap <$> mPlanet
+        mPlanet :: Maybe Planet
+        mPlanet = lookup loc pmap

@@ -116,7 +116,7 @@ marketCell gameStateDyn resourceName = do
         planetDyn = lookup <$> locationDyn <*> planetMapDyn
 
         resourcesDyn :: Dynamic t (Map ResourceName (Maybe Resource))
-        resourcesDyn = fromMaybe empty <$> (fmap . fmap) _resources planetDyn
+        resourcesDyn = fromMaybe empty <$> (fmap . fmap) _resourceMap planetDyn
 
         maybeResourceDyn :: (Dynamic t (Maybe Resource))
         maybeResourceDyn = join <$> lookup resourceName <$> resourcesDyn

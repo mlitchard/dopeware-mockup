@@ -23,8 +23,8 @@ data PlanetName
 
 data Planet 
     = Planet {
-          _resources :: Map ResourceName (Maybe Resource)
-        , _neighbors :: [PlanetName]   
+          _resourceMap :: Map ResourceName (Maybe Resource)
+        , _neighbors   :: [PlanetName]   
       } 
     deriving (Show)
 
@@ -164,4 +164,5 @@ instance Show PInt where
 fromPInt :: PInt -> Int
 fromPInt (PInt a) = a
 
-
+zero :: PInt
+zero = PInt 0
