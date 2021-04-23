@@ -87,8 +87,24 @@ buyModal (Just (GameState _ loc (Just resourceName) _ pmap credits)) = do
                         text "Credits:"
                     divClass "level-right" $ 
                         text $ (pack . show) credits
+                elAttr "div" rangeWrapAttr $ do
+                    elAttr "input" rangeAttr $ blank
+                    elAttr "output" bubbleAttr $ blank
     return never 
     where
+        bubbleAttr :: Map Text Text
+        bubbleAttr = ("class" =: "bubble") <> ("id" =: "buy-bubble") 
+
+        rangeWrapAttr :: Map Text Text 
+        rangeWrapAttr = ("class" =: "range-wrap") <> ("id" =: "buy-range-wrap")
+
+        rangeAttr :: Map Text Text
+        rangeAttr =
+            ("class" =: "range") 
+                <> ("type" =: "range") 
+                <> ("id"   =: "buy-range")
+                <> ("min"  =: "20")
+                <> ("max"  =: "900")
         resourceAmount :: PInt
         resourceAmount = fromMaybe zero $ _count <$> mResource
         mResource :: Maybe Resource 
