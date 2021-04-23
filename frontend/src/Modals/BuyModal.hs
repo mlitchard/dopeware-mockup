@@ -14,6 +14,7 @@ import Control.Monad.IO.Class        (MonadIO)
 import Data.Map.Strict
 import Data.Maybe                    (fromMaybe)
 import Data.Text
+import JavaScript
 import Reflex
 import Reflex.Dom
 
@@ -66,10 +67,10 @@ buyModal :: forall m t .
                 , PostBuild t m)
                 => Maybe GameState -> m (Event t (Maybe GameState))
 buyModal Nothing = return never
-buyModal (Just (GameState _ _ Nothing _ _ _)) = return never 
-buyModal (Just (GameState _ loc (Just resourceName) _ pmap credits)) = do
+buyModal (Just (GameState _ _ Nothing _ _ _ _)) = return never 
+buyModal gs@(Just (GameState _ loc (Just resourceName) _ pmap credits _)) = do
     let title = ("Buying " <> (pack . show $ resourceName))
-    divClass "modal is-active" $ do
+    mAmountE :: Event t (Maybe Int) <- divClass "modal is-active" $ do
         divClass "modal-background" $ blank
         divClass "modal-card" $ do
             elClass "header" "modal-card-head" $ do
@@ -87,11 +88,26 @@ buyModal (Just (GameState _ loc (Just resourceName) _ pmap credits)) = do
                         text "Credits:"
                     divClass "level-right" $ 
                         text $ (pack . show) credits
-                elAttr "div" rangeWrapAttr $ do
-                    elAttr "input" rangeAttr $ blank
-                    elAttr "output" bubbleAttr $ blank
-    return never 
+                inputE <- elAttr "div" rangeWrapAttr $ do
+                    (elt,_) <- elAttr' "input" rangeAttr $ blank
+                    _ <- elAttr "output" bubbleAttr $ blank
+                    return $ () <$ domEvent Input elt
+                (elt,_) <- elClass' "button" "button" $ text "go"
+                amountE ::  Event t (Maybe Int) 
+                    <- performEvent $ setBubble <$ inputE
+                let clickE = () <$ domEvent Click elt
+                amountDyn' <- holdDyn Nothing amountE
+                let amountDyn = traceDyn "amount test" amountDyn'
+                return $ tag (current amountDyn) clickE
+    let updatePayload :: Maybe (Resource,Planet)
+        updatePayload = (,) <$> mResource <*> mPlanet
+        amountE :: Event t Int
+        amountE = fmapMaybe id mAmountE
+        res :: Event t (Maybe GameState)
+        res = (updateInventory resourceName updatePayload gs) <$> amountE
+    return res
     where
+        
         bubbleAttr :: Map Text Text
         bubbleAttr = ("class" =: "bubble") <> ("id" =: "buy-bubble") 
 
@@ -113,3 +129,15 @@ buyModal (Just (GameState _ loc (Just resourceName) _ pmap credits)) = do
         mResourceMap = _resourceMap <$> mPlanet
         mPlanet :: Maybe Planet
         mPlanet = lookup loc pmap
+{-
+updatePayload :: Maybe Resource -> Maybe Planet -> Maybe (Resource, Planet)
+updatePayload (Just res) (Just planet) = Just (res, planet)
+updatePayload _          _             = Nothing
+-} 
+updateInventory :: ResourceName 
+                     -> Maybe (Resource, Planet) 
+                     -> Maybe GameState
+                     -> Int
+                     -> Maybe GameState
+updateInventory _ Nothing _ _ = Nothing
+updateInventory _rname (Just (_resource, _planet)) gstate _amount = gstate 

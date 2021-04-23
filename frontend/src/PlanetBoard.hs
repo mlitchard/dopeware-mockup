@@ -146,6 +146,7 @@ currentPlanet planetName ((GameState {..}), isNeighbor') =
                          Nothing
                          _planetMap
                          _credits
+                         _inventory
         moveFails    = GameState
                          _screenState
                          _location
@@ -153,6 +154,7 @@ currentPlanet planetName ((GameState {..}), isNeighbor') =
                          (Just (planetName, NotNeighbor))
                          _planetMap
                          _credits
+                         _inventory
                 
 updateLocation :: (PlanetName, GameState) -> GameState
 updateLocation (pname, gstate@(GameState {..})) =

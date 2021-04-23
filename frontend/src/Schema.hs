@@ -109,13 +109,17 @@ data PromptData = PromptData
     { _leftSide :: (Text,Text)
     , _rightSide :: (Text, Text)
     }
+type ResourceMap = Map ResourceName Resource
+type PlanetMap   = Map PlanetName Planet
+
 data GameState = GameState {
       _screenState :: ScreenState
     , _location    :: PlanetName
     , _buyResource :: Maybe ResourceName
     , _error       :: Maybe (PlanetName, Error)
-    , _planetMap   :: Map PlanetName Planet
+    , _planetMap   :: PlanetMap
     , _credits     :: Int
+    , _inventory   :: Map ResourceName Resource
   } deriving (Show)
 {-
 data MapFormatting = MapFormatting {
@@ -125,7 +129,7 @@ data MapFormatting = MapFormatting {
   } deriving (Show)
 -}    
 initGameState :: GameState
-initGameState = GameState Travel Vulcan Nothing Nothing initPlanetMap 100 
+initGameState = GameState Travel Vulcan Nothing Nothing initPlanetMap 100 empty
 
 updateScreen :: GameState -> ScreenState -> GameState
 updateScreen gState screenState = gState {_screenState = screenState}
