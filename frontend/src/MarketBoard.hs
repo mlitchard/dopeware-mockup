@@ -94,9 +94,9 @@ marketCell :: forall m t .
                   -> ResourceName 
                   -> m (Event t GameState)
 marketCell gameStateDyn resourceName = do
-    _ <- divClass "column" $ do
+    divClass "column" $ do
         divClass "card" $ do
-            _ <- elClass "header" "card-header" $ do
+            gstateE <- elClass "header" "card-header" $ do
                 divClass "level" $ do
                     divClass "level-left" $ do
                         text (pack . show $ resourceName)
@@ -105,9 +105,9 @@ marketCell gameStateDyn resourceName = do
                         let gameStateE = tag (current gameStateDyn) clickE
                         return $ buyingUpdate resourceName <$> gameStateE
                     modal gameStateE
-            divClass "card-content" $ do
-                showAvailability gameStateDyn maybeResourceDyn resourceName
-    return never
+            _ <- divClass "card-content" $ do
+                     showAvailability gameStateDyn maybeResourceDyn resourceName
+            return gstateE
     where
         locationDyn = _location <$> gameStateDyn
         planetMapDyn = _planetMap <$> gameStateDyn

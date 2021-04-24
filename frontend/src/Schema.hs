@@ -118,8 +118,8 @@ data GameState = GameState {
     , _buyResource :: Maybe ResourceName
     , _error       :: Maybe (PlanetName, Error)
     , _planetMap   :: PlanetMap
-    , _credits     :: Int
-    , _inventory   :: Map ResourceName Resource
+    , _credits     :: PInt
+    , _inventory   :: Map ResourceName PInt
   } deriving (Show)
 {-
 data MapFormatting = MapFormatting {
@@ -133,7 +133,7 @@ initGameState = GameState Travel Vulcan Nothing Nothing initPlanetMap 100 empty
 
 updateScreen :: GameState -> ScreenState -> GameState
 updateScreen gState screenState = gState {_screenState = screenState}
-newtype PInt = PInt Int
+newtype PInt = PInt {fromPInt :: Int}
 
 instance Num PInt where
 
@@ -165,8 +165,18 @@ instance Ord PInt where
 instance Show PInt where
    show x = show $ fromPInt x
 
-fromPInt :: PInt -> Int
-fromPInt (PInt a) = a
+toPInt :: Int -> PInt
+toPInt = PInt . abs 
 
 zero :: PInt
 zero = PInt 0
+
+-- No time to include relude, it's nix trickery.
+-- Copy and Paste it is then.
+{-
+Copyright: (c) 2016 Stephen Diehl
+           (c) 2016-2018 Serokell
+           (c) 2018-2021 Kowainik
+-}
+flap :: Functor f => f (a -> b) -> a -> f b
+flap ff x = (\f -> f x) <$> ff

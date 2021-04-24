@@ -13,6 +13,8 @@ import Control.Monad.Fix             (MonadFix)
 import Control.Monad.IO.Class        (MonadIO)
 import Data.Map.Strict
 import Data.Maybe                    (fromMaybe)
+import Data.Maybe                    (fromJust) -- In a demo? Okay! 
+                                                -- In production? No Way!
 import Data.Text
 import JavaScript
 import Reflex
@@ -70,7 +72,7 @@ buyModal Nothing = return never
 buyModal (Just (GameState _ _ Nothing _ _ _ _)) = return never 
 buyModal gs@(Just (GameState _ loc (Just resourceName) _ pmap credits _)) = do
     let title = ("Buying " <> (pack . show $ resourceName))
-    mAmountE :: Event t (Maybe Int) <- divClass "modal is-active" $ do
+    amountE :: Event t PInt <- divClass "modal is-active" $ do
         divClass "modal-background" $ blank
         divClass "modal-card" $ do
             elClass "header" "modal-card-head" $ do
@@ -98,11 +100,12 @@ buyModal gs@(Just (GameState _ loc (Just resourceName) _ pmap credits _)) = do
                 let clickE = () <$ domEvent Click elt
                 amountDyn' <- holdDyn Nothing amountE
                 let amountDyn = traceDyn "amount test" amountDyn'
-                return $ tag (current amountDyn) clickE
+                let finalAmountE :: Event t PInt
+                    finalAmountE = fmap toPInt $
+                        fmapMaybe id $ tag (current amountDyn) clickE
+                return $ finalAmountE
     let updatePayload :: Maybe (Resource,Planet)
         updatePayload = (,) <$> mResource <*> mPlanet
-        amountE :: Event t Int
-        amountE = fmapMaybe id mAmountE
         res :: Event t (Maybe GameState)
         res = (updateInventory resourceName updatePayload gs) <$> amountE
     return res
@@ -110,8 +113,6 @@ buyModal gs@(Just (GameState _ loc (Just resourceName) _ pmap credits _)) = do
         
         bubbleAttr :: Map Text Text
         bubbleAttr = ("class" =: "bubble") <> ("id" =: "buy-bubble") 
-
-        rangeWrapAttr :: Map Text Text 
         rangeWrapAttr = ("class" =: "range-wrap") <> ("id" =: "buy-range-wrap")
 
         rangeAttr :: Map Text Text
@@ -134,10 +135,43 @@ updatePayload :: Maybe Resource -> Maybe Planet -> Maybe (Resource, Planet)
 updatePayload (Just res) (Just planet) = Just (res, planet)
 updatePayload _          _             = Nothing
 -} 
+
+
 updateInventory :: ResourceName 
                      -> Maybe (Resource, Planet) 
                      -> Maybe GameState
-                     -> Int
+                     -> PInt
                      -> Maybe GameState
-updateInventory _ Nothing _ _ = Nothing
-updateInventory _rname (Just (_resource, _planet)) gstate _amount = gstate 
+updateInventory _ Nothing _ _  = Nothing
+updateInventory _ _ Nothing _  = Nothing
+updateInventory _rname (Just (resource, planet)) (Just gstate) amount = 
+    Just updatedGS
+    where
+        currentPlanetName :: PlanetName
+        currentPlanetName     = _location gstate
+        currentPlanetMap :: PlanetMap
+        currentPlanetMap = _planetMap gstate
+        currentPlanetRMap = _resourceMap planet 
+        currentBuy :: ResourceName -- Danger! Danger! Wil Robinson!
+        currentBuy = fromJust $ _buyResource gstate
+          
+        spend = (_currentPrice resource) * amount  
+        updatedPRCount        =   (_count resource) - amount
+        updatedPlanetResource = resource {_count = updatedPRCount}
+        updatedPlanetResourceMap 
+            = insert currentBuy (Just updatedPlanetResource) currentPlanetRMap
+
+        updatedPlanet         = planet {_resourceMap = updatedPlanetResourceMap}
+        updatedPlanetMap      = 
+            insert currentPlanetName updatedPlanet currentPlanetMap
+        currentInventory  = _inventory gstate
+        currentRInventory = fromMaybe zero $ lookup currentBuy currentInventory
+        updatedRInventory = amount + currentRInventory
+        updatedCredits   = (_credits gstate) - spend      
+        updatedInventory = insert currentBuy updatedRInventory currentInventory
+        updatedGS = gstate { 
+                        _buyResource = Nothing
+                      , _planetMap   = updatedPlanetMap
+                      , _credits     = updatedCredits
+                      , _inventory   = updatedInventory
+                    }
