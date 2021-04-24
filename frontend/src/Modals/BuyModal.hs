@@ -86,10 +86,17 @@ buyModal gs@(Just (GameState _ loc (Just resourceName) _ pmap credits _)) = do
                     divClass "level-right" $ 
                         text $ (pack . show) resourceAmount
                 divClass "level" $ do
+                    divClass "level-left" $ do
+                        text "cost per unit:"
+                    divClass "level-right" $ do
+                        text $ (pack . show . fromPInt) resourcePrice
+                divClass "level" $ do
                     divClass "level-left" $ 
                         text "Credits:"
                     divClass "level-right" $ 
                         text $ (pack . show) credits
+                divClass "level" $ do
+                    elAttr "output" bubbleAttr $ blank 
                 inputE <- elAttr "div" rangeWrapAttr $ do
                     (elt,_) <- elAttr' "input" rangeAttr $ blank
                     _ <- elAttr "output" bubbleAttr $ blank
@@ -120,10 +127,18 @@ buyModal gs@(Just (GameState _ loc (Just resourceName) _ pmap credits _)) = do
             ("class" =: "range") 
                 <> ("type" =: "range") 
                 <> ("id"   =: "buy-range")
-                <> ("min"  =: "20")
-                <> ("max"  =: "900")
+                <> ("min"  =: "1")
+                <> ("max"  =: maxRange)
+
+        maxCost :: PInt 
+        maxCost = resourceAmount * resourcePrice
+        maxRange :: Text
+        maxRange = (pack . show ) $ div (fromPInt maxCost) (fromPInt credits)
+       
         resourceAmount :: PInt
         resourceAmount = fromMaybe zero $ _count <$> mResource
+        resourcePrice :: PInt
+        resourcePrice = fromMaybe zero $ _currentPrice <$> mResource
         mResource :: Maybe Resource 
         mResource = (join . join) $ lookup resourceName <$> mResourceMap
         mResourceMap :: Maybe (Map ResourceName (Maybe Resource))

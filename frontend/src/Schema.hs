@@ -129,11 +129,12 @@ data MapFormatting = MapFormatting {
   } deriving (Show)
 -}    
 initGameState :: GameState
-initGameState = GameState Travel Vulcan Nothing Nothing initPlanetMap 100 empty
+initGameState = 
+    GameState Travel Vulcan Nothing Nothing initPlanetMap 100000 empty
 
 updateScreen :: GameState -> ScreenState -> GameState
 updateScreen gState screenState = gState {_screenState = screenState}
-newtype PInt = PInt {fromPInt :: Int}
+newtype PInt = PInt {fromPInt :: Int} 
 
 instance Num PInt where
 
