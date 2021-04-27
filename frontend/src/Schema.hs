@@ -113,13 +113,14 @@ type ResourceMap = Map ResourceName Resource
 type PlanetMap   = Map PlanetName Planet
 
 data GameState = GameState {
-      _screenState :: ScreenState
-    , _location    :: PlanetName
-    , _buyResource :: Maybe ResourceName
-    , _error       :: Maybe (PlanetName, Error)
-    , _planetMap   :: PlanetMap
-    , _credits     :: PInt
-    , _inventory   :: Map ResourceName PInt
+      _screenState  :: ScreenState
+    , _location     :: PlanetName
+    , _buyResource  :: Maybe ResourceName
+    , _sellResource :: Maybe ResourceName
+    , _error        :: Maybe (PlanetName, Error)
+    , _planetMap    :: PlanetMap
+    , _credits      :: PInt
+    , _inventory    :: Map ResourceName PInt
   } deriving (Show)
 {-
 data MapFormatting = MapFormatting {
@@ -130,7 +131,7 @@ data MapFormatting = MapFormatting {
 -}    
 initGameState :: GameState
 initGameState = 
-    GameState Travel Vulcan Nothing Nothing initPlanetMap 100000 empty
+    GameState Travel Vulcan Nothing Nothing Nothing initPlanetMap 100000 empty
 
 updateScreen :: GameState -> ScreenState -> GameState
 updateScreen gState screenState = gState {_screenState = screenState}

@@ -69,8 +69,8 @@ buyModal :: forall m t .
                 , PostBuild t m)
                 => Maybe GameState -> m (Event t (Maybe GameState))
 buyModal Nothing = return never
-buyModal (Just (GameState _ _ Nothing _ _ _ _)) = return never 
-buyModal gs@(Just (GameState _ loc (Just resourceName) _ pmap credits _)) = do
+buyModal (Just (GameState _ _ _ Nothing  _ _ _ _)) = return never 
+buyModal gs@(Just (GameState _ loc _ (Just resourceName) _ pmap credits _)) = do
     let title = ("Buying " <> (pack . show $ resourceName))
     amountE :: Event t PInt <- divClass "modal is-active" $ do
         divClass "modal-background" $ blank
@@ -125,15 +125,20 @@ buyModal gs@(Just (GameState _ loc (Just resourceName) _ pmap credits _)) = do
         rangeAttr :: Map Text Text
         rangeAttr =
             ("class" =: "range") 
-                <> ("type" =: "range") 
-                <> ("id"   =: "buy-range")
-                <> ("min"  =: "1")
-                <> ("max"  =: maxRange)
+                <> ("type"  =: "range") 
+                <> ("id"    =: "buy-range")
+                <> ("value" =: rangeAvg)
+                <> ("min"   =: "1")
+                <> ("max"   =: maxRange)
 
         maxCost :: PInt 
         maxCost = resourceAmount * resourcePrice
-        maxRange :: Text
-        maxRange = (pack . show ) $ div (fromPInt maxCost) (fromPInt credits)
+        maxRange, rangeAvg :: Text
+        (maxRange,rangeAvg) =
+            let mr = div (fromPInt maxCost) (fromPInt credits)
+                avg' = (pack . show) $ mr `div` 2
+                mr' = (pack . show) mr
+            in (mr',avg')
        
         resourceAmount :: PInt
         resourceAmount = fromMaybe zero $ _count <$> mResource

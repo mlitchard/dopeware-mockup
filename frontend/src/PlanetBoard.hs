@@ -143,6 +143,7 @@ currentPlanet planetName ((GameState {..}), isNeighbor') =
                          _screenState
                          planetName
                          Nothing
+                         _sellResource
                          Nothing
                          _planetMap
                          _credits
@@ -151,6 +152,7 @@ currentPlanet planetName ((GameState {..}), isNeighbor') =
                          _screenState
                          _location
                          Nothing
+                         _sellResource
                          (Just (planetName, NotNeighbor))
                          _planetMap
                          _credits

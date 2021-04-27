@@ -22,6 +22,7 @@ import           Data.Text hiding (map,empty)
 import qualified Data.Text as T
 import           Reflex.Dom
 
+import           InventoryTable hiding (showAvailability)
 import           Modals.BuyModal
 import           Panels
 import           Schema
@@ -44,7 +45,9 @@ marketBoard gameStateDyn = do
     boardSwitchE <- divClass "level" $ do
         marketPanel gameStateDyn
     tableActionE <- divClass "level" $ do
-        marketTable gameStateDyn
+        mtable <- marketTable gameStateDyn
+        _ <- inventoryTable gameStateDyn
+        return $ leftmost [mtable]
     return $ leftmost [boardSwitchE, tableActionE]
 
 marketTable :: forall m t .
