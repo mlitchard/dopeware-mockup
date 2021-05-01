@@ -107,7 +107,8 @@ marketCell gameStateDyn resourceName = do
                         clickE <- buyButton maybeResourceDyn
                         let gameStateE = tag (current gameStateDyn) clickE
                         return $ buyingUpdate resourceName <$> gameStateE
-                    modal gameStateE
+                    uGameStateE <- modal gameStateE
+                    return $ traceEvent "modal returned" uGameStateE
             _ <- divClass "card-content" $ do
                      showAvailability gameStateDyn maybeResourceDyn resourceName
             return gstateE
@@ -144,7 +145,7 @@ buyButton :: forall m t .
                  -> m (Event t ())
 buyButton maybeResourceDyn = do
     (elt,_) <- elDynAttr' "button" buttonAttrDyn $ text "Buy"
-    return $ () <$ domEvent Click elt
+    return $ traceEvent "buyButton" $ () <$ domEvent Click elt
     where
         buttonAttr    = "class" =: buttonClass
         disabledAttr  = "disabled" =: "disabled"

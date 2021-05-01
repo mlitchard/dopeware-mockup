@@ -69,8 +69,8 @@ buyModal :: forall m t .
                 , PostBuild t m)
                 => Maybe GameState -> m (Event t (Maybe GameState))
 buyModal Nothing = return never
-buyModal (Just (GameState _ _ _ Nothing  _ _ _ _)) = return never 
-buyModal gs@(Just (GameState _ loc _ (Just resourceName) _ pmap credits _)) = do
+buyModal (Just (GameState _ _ Nothing _ _ _ _ _)) = return never 
+buyModal gs@(Just (GameState _ loc (Just resourceName) _ _ pmap credits _)) = do
     let title = ("Buying " <> (pack . show $ resourceName))
     amountE :: Event t PInt <- divClass "modal is-active" $ do
         divClass "modal-background" $ blank
