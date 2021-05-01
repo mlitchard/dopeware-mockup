@@ -17,12 +17,13 @@ import Prelude hiding (lookup)
 import           Control.Monad.Fix
 import           Control.Monad.IO.Class
 import           Data.Map.Strict
-import           Data.Maybe (fromMaybe)
+-- import           Data.Maybe (fromMaybe)
 import           Data.Text hiding (map,empty)
 -- import qualified Data.Text as T
 import           Reflex.Dom
 
--- import           Modals.BuyModal
+import           Modals.Modal
+import           Modals.SellModal
 -- import           Panels
 import           Schema
 
@@ -79,27 +80,20 @@ inventoryCell gameStateDyn resourceName = do
                 divClass "level" $ do
                     divClass "level-left" $ do
                         text (pack . show $ resourceName)
-                    _gameStateE <- divClass "level-right" $ do
+                    gameStateE <- divClass "level-right" $ do
                         clickE <- sellButton amountDyn
                         let gameStateE = tag (current gameStateDyn) clickE
                         return $ sellingUpdate resourceName <$> gameStateE
-                    -- modal gameStateE
-                    return never
+                    modal sellModal gameStateE
             _ <- divClass "card-content" $ do
                      showAvailability gameStateDyn amountDyn resourceName
             return gstateE
     where
---        locationDyn = _location <$> gameStateDyn
---        planetMapDyn = _planetMap <$> gameStateDyn
+        amountDyn :: Dynamic t (Maybe PInt)
+        amountDyn = lookup resourceName <$> _inventory <$> gameStateDyn 
+                    
 
---        _planetDyn :: Dynamic t (Maybe Planet)
---        _planetDyn = lookup <$> locationDyn <*> planetMapDyn
-
-        inventoryDyn :: Dynamic t (Map ResourceName PInt)
-        inventoryDyn = _inventory <$> gameStateDyn
         
-        amountDyn :: Dynamic t PInt
-        amountDyn = fromMaybe zero <$> lookup resourceName <$> inventoryDyn
 
 sellingUpdate :: ResourceName -> GameState -> GameState
 sellingUpdate resName gstate = gstate {_sellResource = Just resName}
@@ -117,17 +111,18 @@ sellButton :: forall m t .
                  , PerformEvent t m
                  , TriggerEvent t m
                  , PostBuild t m) 
-                 => Dynamic t PInt
+                 => Dynamic t (Maybe PInt)
                  -> m (Event t ())
 sellButton amountDyn = do
-    (elt,_) <- elDynAttr' "button" buttonAttrDyn $ text "Buy"
+    (elt,_) <- elDynAttr' "button" buttonAttrDyn $ text "Sell"
     return $ () <$ domEvent Click elt
     where
         buttonAttr    = "class" =: buttonClass
         disabledAttr  = "disabled" =: "disabled"
         buttonClass   = "button is-rounded is-success is-outlined"
         buttonAttrDyn = ffor amountDyn $ \case 
-                             (PInt 0) -> buttonAttr <> disabledAttr
+                             (Just (PInt 0)) -> buttonAttr <> disabledAttr
+                             Nothing         -> buttonAttr <> disabledAttr
                              _        -> buttonAttr
 
 showAvailability :: forall m t .
@@ -144,10 +139,10 @@ showAvailability :: forall m t .
                         , TriggerEvent t m
                         , PostBuild t m)
                         => Dynamic t GameState 
-                        -> Dynamic t PInt
+                        -> Dynamic t (Maybe PInt)
                         -> ResourceName 
                         -> m (Event t GameState)
-showAvailability _gameStateDyn amountDyn _resourceName = do
+showAvailability _gameStateDyn mAmountDyn _resourceName = do
     divClass "level" $ do
         divClass "level-left" $ do
             text "availability"
@@ -155,7 +150,11 @@ showAvailability _gameStateDyn amountDyn _resourceName = do
             dynText showAmountDyn
     return never
     where
-        showAmountDyn = (pack . show) <$> amountDyn
+        noneTxt = "Not Available"
+        showAmountDyn = ffor mAmountDyn $ \case
+                            (Just (PInt 0))      -> noneTxt
+                            Nothing              -> noneTxt
+                            (Just (PInt amount)) -> (pack . show) amount
 {-
     where
         locationDyn = _location <$> gameStateDyn

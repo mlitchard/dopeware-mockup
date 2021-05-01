@@ -24,6 +24,7 @@ import           Reflex.Dom
 
 import           InventoryTable hiding (showAvailability)
 import           Modals.BuyModal
+import           Modals.Modal
 import           Panels
 import           Schema
 
@@ -107,7 +108,7 @@ marketCell gameStateDyn resourceName = do
                         clickE <- buyButton maybeResourceDyn
                         let gameStateE = tag (current gameStateDyn) clickE
                         return $ buyingUpdate resourceName <$> gameStateE
-                    uGameStateE <- modal gameStateE
+                    uGameStateE <- modal buyModal gameStateE
                     return $ traceEvent "modal returned" uGameStateE
             _ <- divClass "card-content" $ do
                      showAvailability gameStateDyn maybeResourceDyn resourceName

@@ -23,7 +23,7 @@ data PlanetName
 
 data Planet 
     = Planet {
-          _resourceMap :: Map ResourceName (Maybe Resource)
+          _resourceMap :: ResourceMap
         , _neighbors   :: [PlanetName]   
       } 
     deriving (Show)
@@ -109,7 +109,7 @@ data PromptData = PromptData
     { _leftSide :: (Text,Text)
     , _rightSide :: (Text, Text)
     }
-type ResourceMap = Map ResourceName Resource
+type ResourceMap = Map ResourceName (Maybe Resource)
 type PlanetMap   = Map PlanetName Planet
 
 data GameState = GameState {

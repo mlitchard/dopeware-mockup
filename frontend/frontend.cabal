@@ -34,6 +34,8 @@ executable frontend
                        , JavaScript
                        , MarketBoard
                        , Modals.BuyModal
+                       , Modals.SellModal
+                       , Modals.Modal
                        , Panels
                        , PlanetBoard
                        , Schema

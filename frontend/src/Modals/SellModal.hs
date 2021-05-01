@@ -5,7 +5,7 @@
 {-# LANGUAGE TypeFamilies        #-}
 {-# LANGUAGE LambdaCase          #-}
 
-module Modals.BuyModal where
+module Modals.SellModal where
 
 import Prelude                hiding (lookup)
 import Control.Monad                 (join)
@@ -22,7 +22,7 @@ import Reflex.Dom
 
 import Schema
 
-buyModal :: forall m t .
+sellModal :: forall m t .
                 ( Reflex t
                 , Monad m
                 , MonadFix m
@@ -36,9 +36,9 @@ buyModal :: forall m t .
                 , TriggerEvent t m
                 , PostBuild t m)
                 => Maybe GameState -> m (Event t (Maybe GameState))
-buyModal Nothing = return never
-buyModal (Just (GameState _ _ Nothing _ _ _ _ _)) = return never 
-buyModal gs@(Just (GameState _ loc (Just resName) _ _ pmap credits _)) = do
+sellModal Nothing = return never
+sellModal (Just (GameState _ _ _ Nothing  _ _ _ _)) = return never 
+sellModal gs@(Just (GameState _ loc _ (Just resName) _ pmap credits _)) = do
     let title = ("Buying " <> (pack . show $ resName))
     amountE :: Event t PInt <- divClass "modal is-active" $ do
         divClass "modal-background" $ blank
@@ -144,7 +144,7 @@ updateInventory _rname (Just (resource, planet)) (Just gstate) amount =
         currentBuy = fromJust $ _buyResource gstate
           
         spend = (_currentPrice resource) * amount  
-        updatedPRCount        =   (_count resource) - amount
+        updatedPRCount        =   (_count resource) + amount
         updatedPlanetResource = resource {_count = updatedPRCount}
         updatedPlanetResourceMap 
             = insert currentBuy (Just updatedPlanetResource) currentPlanetRMap
@@ -154,8 +154,8 @@ updateInventory _rname (Just (resource, planet)) (Just gstate) amount =
             insert currentPlanetName updatedPlanet currentPlanetMap
         currentInventory  = _inventory gstate
         currentRInventory = fromMaybe zero $ lookup currentBuy currentInventory
-        updatedRInventory = amount + currentRInventory
-        updatedCredits   = (_credits gstate) - spend      
+        updatedRInventory = amount - currentRInventory
+        updatedCredits   = (_credits gstate) + spend      
         updatedInventory = insert currentBuy updatedRInventory currentInventory
         updatedGS = gstate { 
                         _buyResource = Nothing
